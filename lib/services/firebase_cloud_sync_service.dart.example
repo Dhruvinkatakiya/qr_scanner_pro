@@ -1,0 +1,99 @@
+// ⚠️  DROP-IN FIREBASE IMPLEMENTATION — NOT COMPILED BY DEFAULT ⚠️
+//
+// The app ships with a no-op `LocalOnlyCloudSyncService` so it builds and runs
+// with zero Firebase configuration. To enable cloud backup & sync for Pro users:
+//
+//   1. Add the Firebase dependencies:
+//        flutter pub add firebase_core firebase_auth cloud_firestore google_sign_in
+//   2. Run `flutterfire configure` (adds android/app/google-services.json and
+//      lib/firebase_options.dart) and apply the google-services Gradle plugin
+//      (see README → "Firebase setup").
+//   3. Rename this file to `firebase_cloud_sync_service.dart`.
+//   4. In `lib/main.dart`, initialise Firebase before runApp:
+//        await Firebase.initializeApp(
+//            options: DefaultFirebaseOptions.currentPlatform);
+//        // sign in anonymously so every user has a stable uid:
+//        await FirebaseAuth.instance.signInAnonymously();
+//   5. Override the provider in your ProviderScope:
+//        cloudSyncServiceProvider.overrideWithValue(FirebaseCloudSyncService()),
+//
+// Firestore layout (matches the security rules in the README):
+//   users/{uid}/scans/{recordId}  ->  ScanRecord.toJson()
+//
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:google_sign_in/google_sign_in.dart';
+//
+// import '../models/scan_record.dart';
+// import 'cloud_sync_service.dart';
+//
+// class FirebaseCloudSyncService implements CloudSyncService {
+//   final FirebaseAuth _auth = FirebaseAuth.instance;
+//   final FirebaseFirestore _db = FirebaseFirestore.instance;
+//
+//   @override
+//   bool get isAvailable => true;
+//
+//   @override
+//   String? get accountLabel {
+//     final user = _auth.currentUser;
+//     if (user == null || user.isAnonymous) return null;
+//     return user.email ?? user.displayName;
+//   }
+//
+//   CollectionReference<Map<String, dynamic>> get _col {
+//     final uid = _auth.currentUser!.uid;
+//     return _db.collection('users').doc(uid).collection('scans');
+//   }
+//
+//   @override
+//   Future<bool> signInWithGoogle() async {
+//     try {
+//       final googleUser = await GoogleSignIn().signIn();
+//       if (googleUser == null) return false;
+//       final googleAuth = await googleUser.authentication;
+//       final credential = GoogleAuthProvider.credential(
+//         accessToken: googleAuth.accessToken,
+//         idToken: googleAuth.idToken,
+//       );
+//       // Upgrade the anonymous account, preserving its uid + data.
+//       final current = _auth.currentUser;
+//       if (current != null && current.isAnonymous) {
+//         await current.linkWithCredential(credential);
+//       } else {
+//         await _auth.signInWithCredential(credential);
+//       }
+//       return true;
+//     } catch (_) {
+//       return false;
+//     }
+//   }
+//
+//   @override
+//   Future<void> signOut() async {
+//     await GoogleSignIn().signOut();
+//     await _auth.signInAnonymously(); // keep a session for local-only use
+//   }
+//
+//   @override
+//   Future<void> upsert(ScanRecord record) =>
+//       _col.doc(record.id).set(record.toJson());
+//
+//   @override
+//   Future<void> delete(String id) => _col.doc(id).delete();
+//
+//   @override
+//   Future<List<ScanRecord>> fetchAll() async {
+//     final snapshot = await _col.get();
+//     return snapshot.docs.map((d) => ScanRecord.fromJson(d.data())).toList();
+//   }
+//
+//   @override
+//   Future<void> pushAll(List<ScanRecord> records) async {
+//     final batch = _db.batch();
+//     for (final r in records) {
+//       batch.set(_col.doc(r.id), r.toJson());
+//     }
+//     await batch.commit();
+//   }
+// }

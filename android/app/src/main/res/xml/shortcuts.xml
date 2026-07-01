@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_scan_short"
+        android:shortcutLongLabel="@string/shortcut_scan_long">
+        <intent
+            android:action="com.qrscannerpro.action.SCAN"
+            android:targetPackage="com.qrscannerpro.qr_scanner_pro"
+            android:targetClass="com.qrscannerpro.qr_scanner_pro.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="create"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_create_short"
+        android:shortcutLongLabel="@string/shortcut_create_long">
+        <intent
+            android:action="com.qrscannerpro.action.CREATE"
+            android:targetPackage="com.qrscannerpro.qr_scanner_pro"
+            android:targetClass="com.qrscannerpro.qr_scanner_pro.MainActivity" />
+    </shortcut>
+</shortcuts>
