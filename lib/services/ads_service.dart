@@ -48,10 +48,12 @@ class AdsService {
         final List<dynamic> data = jsonDecode(stringData);
         for (var item in data) {
           if (item['Platform'] == 'Android' && item['App Name'] == 'QR_Scanner') {
-            final type = item['Ad Type'];
-            final unitId = item['Ad Unit ID'] as String?;
-            final status = item['Status'];
-            final isEnabled = status == 'Enable';
+            final type = (item['Ad Type'] as String?)?.trim();
+            final unitId = (item['Ad Unit ID'] as String?)?.trim();
+            // "Enable" (case/whitespace-insensitive) shows the ad; anything
+            // else — "Disable", blank, missing — hides it.
+            final status = (item['Status'] as String?)?.trim().toLowerCase();
+            final isEnabled = status == 'enable';
             if (unitId == null || unitId.isEmpty) continue;
 
             if (type == 'Banner') {
