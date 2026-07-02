@@ -42,7 +42,7 @@ class AppConstants {
   // ---------------------------------------------------------------------------
   static const String privacyPolicyUrl =
       'https://example.com/qr-scanner-pro/privacy';
-  static const String supportEmail = 'support@example.com';
+  static const String supportEmail = 'infodevamjyot@gmail.com';
   static const String playStoreUrl =
-      'https://play.google.com/store/apps/details?id=com.example.qr_scanner_pro';
+      'https://play.google.com/store/apps/details?id=com.devamjyot.qr_scanner';
 }

@@ -6,11 +6,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Reading images from the gallery (scan from image) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <!-- Scan-from-image uses the system photo picker (image_picker), which
+         needs no media permissions. Declaring READ_MEDIA_IMAGES without a
+         broad-access core feature violates Play's Photo and Video
+         Permissions policy and gets the app rejected. -->
     <!-- Saving generated QR codes to the gallery on older Android versions -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
