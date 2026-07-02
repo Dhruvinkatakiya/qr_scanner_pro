@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.qrscannerpro.qr_scanner_pro"
+    namespace = "com.devamjyot.qr_scanner"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.qrscannerpro.qr_scanner_pro"
+        applicationId = "com.devamjyot.qr_scanner"
         // ML Kit (mobile_scanner) and Google Mobile Ads require API 23+.
         minSdk = maxOf(23, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">QR Scanner Pro</string>
+    <string name="app_name">QR Scanner</string>
     <string name="widget_name">Quick Scan</string>
     <string name="shortcut_scan_short">Scan</string>
     <string name="shortcut_scan_long">Scan a QR or barcode</string>

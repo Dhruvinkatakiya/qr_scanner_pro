@@ -1,4 +1,4 @@
-package com.qrscannerpro.qr_scanner_pro
+package com.devamjyot.qr_scanner
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
