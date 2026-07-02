@@ -4,10 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import '../utils/constants.dart';
-
-/// Wraps Google Mobile Ads. Uses Google's official **test** ad units by default
-/// (see [AppConstants]); swap in real unit ids before release.
+/// Wraps Google Mobile Ads. Ad unit IDs are provided exclusively by the
+/// remote ad config; while the config is missing or unreachable no ads are
+/// requested at all.
 class AdsService {
   AdsService._();
   static final AdsService instance = AdsService._();
@@ -28,9 +27,9 @@ class AdsService {
   InterstitialAd? _interstitialAd;
   bool _isInterstitialAdLoading = false;
 
-  String _bannerUnitId = AppConstants.testBannerAdUnit;
-  String _interstitialUnitId = AppConstants.testInterstitialAdUnit;
-  String _appOpenUnitId = AppConstants.testAppOpenAdUnit;
+  String? _bannerUnitId;
+  String? _interstitialUnitId;
+  String? _appOpenUnitId;
 
   bool _bannerEnabled = true;
   bool _interstitialEnabled = true;
@@ -50,9 +49,10 @@ class AdsService {
         for (var item in data) {
           if (item['Platform'] == 'Android' && item['App Name'] == 'QR_Scanner') {
             final type = item['Ad Type'];
-            final unitId = item['Ad Unit ID'];
+            final unitId = item['Ad Unit ID'] as String?;
             final status = item['Status'];
             final isEnabled = status == 'Enable';
+            if (unitId == null || unitId.isEmpty) continue;
 
             if (type == 'Banner') {
               _bannerUnitId = unitId;
@@ -92,9 +92,13 @@ class AdsService {
   // ---------------------------------------------------------------------------
   /// Builds (but does not attach) a banner. Returns null when ads are disabled.
   BannerAd? createBanner({VoidCallback? onLoaded}) {
-    if (!enabled || !_bannerEnabled || !_initialised || !_supportedPlatform) return null;
+    final unitId = _bannerUnitId;
+    if (unitId == null ||
+        !enabled || !_bannerEnabled || !_initialised || !_supportedPlatform) {
+      return null;
+    }
     return BannerAd(
-      adUnitId: _bannerUnitId,
+      adUnitId: unitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
@@ -111,12 +115,14 @@ class AdsService {
   // App Open Ads
   // ---------------------------------------------------------------------------
   void loadAppOpenAd() {
+    final unitId = _appOpenUnitId;
+    if (unitId == null) return;
     if (!enabled || !_appOpenEnabled || !_initialised || !_supportedPlatform) return;
     if (_appOpenAd != null || _isAppOpenAdLoading) return;
-    
+
     _isAppOpenAdLoading = true;
     AppOpenAd.load(
-      adUnitId: _appOpenUnitId,
+      adUnitId: unitId,
       request: const AdRequest(),
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
@@ -160,12 +166,14 @@ class AdsService {
   // Interstitial Ads
   // ---------------------------------------------------------------------------
   void loadInterstitialAd() {
+    final unitId = _interstitialUnitId;
+    if (unitId == null) return;
     if (!enabled || !_interstitialEnabled || !_initialised || !_supportedPlatform) return;
     if (_interstitialAd != null || _isInterstitialAdLoading) return;
-    
+
     _isInterstitialAdLoading = true;
     InterstitialAd.load(
-      adUnitId: _interstitialUnitId,
+      adUnitId: unitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
