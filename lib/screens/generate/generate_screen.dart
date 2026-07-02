@@ -203,7 +203,7 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen>
       appBar: AppBar(title: Text('generate.title'.tr())),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
-            AppSpacing.base, AppSpacing.sm, AppSpacing.base, AppSpacing.xl),
+            AppSpacing.base, AppSpacing.sm, AppSpacing.base, 120.0),
         children: [
           // ─── Type selector ─────────────────────────────────────────────────
           _TypeSelector(
