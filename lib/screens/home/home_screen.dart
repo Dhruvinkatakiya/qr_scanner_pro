@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../providers/history_provider.dart';
+import '../../services/ads_service.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/banner_ad_widget.dart';
@@ -69,11 +70,15 @@ class HomeScreen extends ConsumerWidget {
                               icon: Icons.qr_code_scanner_rounded,
                               title: 'home.scan_code'.tr(),
                               subtitle: 'home.scan_desc'.tr(),
-                              gradientColors: [
-                                const Color(0xFF3B7FF5),
-                                const Color(0xFF5A9CF8),
+                              gradientColors: const [
+                                Color(0xFF0055FF), // Logo Primary
+                                Color(0xFF00E5FF), // Logo Laser
                               ],
-                              onTap: () => shell?.openScanner(),
+                              onTap: () {
+                                AdsService.instance.showInterstitialAd(
+                                  onDismissed: () => shell?.openScanner(),
+                                );
+                              },
                             ).animate().fadeIn(duration: 450.ms, delay: 80.ms).slideX(
                                   begin: -0.06,
                                   end: 0,
@@ -88,11 +93,15 @@ class HomeScreen extends ConsumerWidget {
                               icon: Icons.qr_code_2_rounded,
                               title: 'home.create_qr'.tr(),
                               subtitle: 'home.create_desc'.tr(),
-                              gradientColors: [
-                                const Color(0xFF7C5CFC),
-                                const Color(0xFF9B7FFF),
+                              gradientColors: const [
+                                Color(0xFF5A32FA), // Deep Violet to complement the blue
+                                Color(0xFF9072FF),
                               ],
-                              onTap: () => shell?.goTo(1),
+                              onTap: () {
+                                AdsService.instance.showInterstitialAd(
+                                  onDismissed: () => shell?.goTo(1),
+                                );
+                              },
                             ).animate().fadeIn(duration: 450.ms, delay: 160.ms).slideX(
                                   begin: 0.06,
                                   end: 0,
@@ -251,16 +260,16 @@ class _Header extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               colors: [
-                scheme.primary,
-                scheme.tertiary,
+                Color(0xFF0055FF), // Logo deep blue
+                Color(0xFF00C6FF), // Bright cyan/blue transition
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(14),
-            boxShadow: AppShadows.md(scheme.primary),
+            boxShadow: AppShadows.md(const Color(0xFF0055FF)),
           ),
           child: const Icon(Icons.qr_code_rounded, color: Colors.white, size: 22),
         ),

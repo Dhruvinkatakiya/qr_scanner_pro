@@ -340,13 +340,16 @@ class _ToggleRow extends StatelessWidget {
               : Colors.black.withValues(alpha: 0.06),
         ),
       ),
-      child: SwitchListTile(
-        contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: 0),
-        secondary: Icon(icon, color: value ? scheme.primary : scheme.onSurfaceVariant),
-        title: Text(title),
-        value: value,
-        onChanged: onChanged,
+      child: Material(
+        color: Colors.transparent,
+        child: SwitchListTile(
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: 0),
+          secondary: Icon(icon, color: value ? scheme.primary : scheme.onSurfaceVariant),
+          title: Text(title),
+          value: value,
+          onChanged: onChanged,
+        ),
       ),
     );
   }

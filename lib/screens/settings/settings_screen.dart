@@ -346,16 +346,16 @@ class _RateBannerState extends State<_RateBanner> {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.base),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               colors: [
-                scheme.primary.withValues(alpha: 0.85),
-                scheme.tertiary.withValues(alpha: 0.85),
+                Color(0xFF0055FF), // Logo primary
+                Color(0xFF00E5FF), // Logo cyan
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(AppRadius.xl),
-            boxShadow: AppShadows.md(scheme.primary),
+            boxShadow: AppShadows.md(const Color(0xFF0055FF)),
           ),
           child: Row(
             children: [
@@ -375,7 +375,7 @@ class _RateBannerState extends State<_RateBanner> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Enjoying QR Scanner Pro?',
+                      'Love using the scanner?',
                       style: GoogleFonts.manrope(
                         color: Colors.white,
                         fontSize: 15,
@@ -384,7 +384,7 @@ class _RateBannerState extends State<_RateBanner> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Share with friends or leave a review ⭐',
+                      'Help us grow by leaving a quick rating ⭐',
                       style: GoogleFonts.inter(
                         color: Colors.white.withValues(alpha: 0.88),
                         fontSize: 12,
@@ -506,10 +506,13 @@ class _SectionCard extends StatelessWidget {
             boxShadow:
                 isDark ? null : AppShadows.sm(Colors.black),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.base, vertical: AppSpacing.sm),
-            child: Column(children: children),
+          child: Material(
+            color: Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.base, vertical: AppSpacing.sm),
+              child: Column(children: children),
+            ),
           ),
         ),
       ],

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import '../../services/ads_service.dart';
 import '../../services/intent_service.dart';
 import '../../theme/app_shadows.dart';
 import '../../theme/app_spacing.dart';
@@ -27,7 +27,7 @@ class RootShell extends ConsumerStatefulWidget {
 }
 
 class RootShellState extends ConsumerState<RootShell>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late int _index = widget.initialIndex;
   late final AnimationController _fabPulseController;
   bool _fabPressed = false;
@@ -39,14 +39,21 @@ class RootShellState extends ConsumerState<RootShell>
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleLaunchAction());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fabPulseController.dispose();
     super.dispose();
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      AdsService.instance.showAppOpenAd();
+    }
   }
 
   /// Honour a launcher-shortcut / widget deep link ("scan" or "create").
@@ -75,150 +82,131 @@ class RootShellState extends ConsumerState<RootShell>
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // ─── Screen content ──────────────────────────────────────────────
-          IndexedStack(
-            index: _index,
-            children: const [
-              HomeScreen(),
-              GenerateScreen(),
-              HistoryScreen(),
-              SettingsScreen(),
-            ],
-          ),
-
-          // ─── Floating pill nav bar ───────────────────────────────────────
-          Positioned(
-            bottom: bottomPadding + AppSpacing.base,
-            left: AppSpacing.base,
-            right: AppSpacing.base,
-            child: _FloatingNavBar(
-              selectedIndex: _index,
-              isDark: isDark,
-              fabPulseController: _fabPulseController,
-              fabPressed: _fabPressed,
-              onTabSelected: goTo,
-              onFabPressed: () {
-                setState(() => _fabPressed = true);
-                Future.delayed(const Duration(milliseconds: 120), () {
-                  if (mounted) setState(() => _fabPressed = false);
-                  openScanner();
-                });
-              },
-              scheme: scheme,
-            ),
-          ),
+      extendBody: true, // Allows body to scroll behind the BottomAppBar
+      body: IndexedStack(
+        index: _index,
+        children: const [
+          HomeScreen(),
+          GenerateScreen(),
+          HistoryScreen(),
+          SettingsScreen(),
         ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: _ScanFab(
+        controller: _fabPulseController,
+        pressed: _fabPressed,
+        onPressed: () {
+          setState(() => _fabPressed = true);
+          Future.delayed(const Duration(milliseconds: 120), () {
+            if (mounted) setState(() => _fabPressed = false);
+            AdsService.instance.showInterstitialAd(
+              onDismissed: openScanner,
+            );
+          });
+        },
+        scheme: scheme,
+      ),
+      bottomNavigationBar: _StandardNavBar(
+        selectedIndex: _index,
+        onTabSelected: goTo,
+        scheme: scheme,
       ),
     );
   }
 }
 
-// ─── Floating Nav Bar ─────────────────────────────────────────────────────────
+// ─── Standard Bottom App Bar ──────────────────────────────────────────────────
 
-class _FloatingNavBar extends StatelessWidget {
-  const _FloatingNavBar({
+class _StandardNavBar extends StatelessWidget {
+  const _StandardNavBar({
     required this.selectedIndex,
-    required this.isDark,
-    required this.fabPulseController,
-    required this.fabPressed,
     required this.onTabSelected,
-    required this.onFabPressed,
     required this.scheme,
   });
 
   final int selectedIndex;
-  final bool isDark;
-  final AnimationController fabPulseController;
-  final bool fabPressed;
   final ValueChanged<int> onTabSelected;
-  final VoidCallback onFabPressed;
   final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.xxl),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: 68,
-          decoration: BoxDecoration(
-            color: isDark
-                ? const Color(0xFF161B26).withValues(alpha: 0.92)
-                : Colors.white.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(AppRadius.xxl),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.06),
-            ),
-            boxShadow: AppShadows.lg(Colors.black),
-          ),
-          child: Row(
-            children: [
-              // Home
-              _NavPill(
-                icon: Icons.home_rounded,
-                label: 'nav.home'.tr(),
-                selected: selectedIndex == 0,
-                onTap: () => onTabSelected(0),
-                scheme: scheme,
-              ),
-              // Create
-              _NavPill(
-                icon: Icons.qr_code_2_rounded,
-                label: 'nav.create'.tr(),
-                selected: selectedIndex == 1,
-                onTap: () => onTabSelected(1),
-                scheme: scheme,
-              ),
-              // Centre scan FAB
-              Expanded(
-                child: Center(
-                  child: _ScanFab(
-                    controller: fabPulseController,
-                    pressed: fabPressed,
-                    onPressed: onFabPressed,
-                    scheme: scheme,
-                  ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return BottomAppBar(
+      color: isDark ? const Color(0xFF161B26) : Colors.white,
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      height: 70,
+      padding: EdgeInsets.zero,
+      elevation: 8,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          // Left side
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _NavIcon(
+                  icon: Icons.home_rounded,
+                  label: 'nav.home'.tr(),
+                  selected: selectedIndex == 0,
+                  onTap: () => onTabSelected(0),
+                  scheme: scheme,
                 ),
-              ),
-              // History
-              _NavPill(
-                icon: Icons.history_rounded,
-                label: 'nav.history'.tr(),
-                selected: selectedIndex == 2,
-                onTap: () => onTabSelected(2),
-                scheme: scheme,
-              ),
-              // Settings
-              _NavPill(
-                icon: Icons.settings_rounded,
-                label: 'nav.settings'.tr(),
-                selected: selectedIndex == 3,
-                onTap: () => onTabSelected(3),
-                scheme: scheme,
-              ),
-            ],
+                _NavIcon(
+                  icon: Icons.qr_code_2_rounded,
+                  label: 'nav.create'.tr(),
+                  selected: selectedIndex == 1,
+                  onTap: () => onTabSelected(1),
+                  scheme: scheme,
+                ),
+              ],
+            ),
           ),
-        ),
+          
+          // FAB Space
+          const SizedBox(width: 48),
+          
+          // Right side
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _NavIcon(
+                  icon: Icons.history_rounded,
+                  label: 'nav.history'.tr(),
+                  selected: selectedIndex == 2,
+                  onTap: () => onTabSelected(2),
+                  scheme: scheme,
+                ),
+                _NavIcon(
+                  icon: Icons.settings_rounded,
+                  label: 'nav.settings'.tr(),
+                  selected: selectedIndex == 3,
+                  onTap: () => onTabSelected(3),
+                  scheme: scheme,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    ).animate().fadeIn(duration: 500.ms, delay: 100.ms).slideY(
-          begin: 0.15,
+    ).animate().fadeIn(duration: 400.ms, delay: 100.ms).slideY(
+          begin: 0.2,
           end: 0,
-          duration: 500.ms,
+          duration: 400.ms,
           delay: 100.ms,
           curve: Curves.easeOut,
         );
   }
 }
 
-// ─── Nav Pill Item ────────────────────────────────────────────────────────────
+// ─── Nav Icon Item ────────────────────────────────────────────────────────────
 
-class _NavPill extends StatefulWidget {
-  const _NavPill({
+class _NavIcon extends StatefulWidget {
+  const _NavIcon({
     required this.icon,
     required this.label,
     required this.selected,
@@ -233,32 +221,34 @@ class _NavPill extends StatefulWidget {
   final ColorScheme scheme;
 
   @override
-  State<_NavPill> createState() => _NavPillState();
+  State<_NavIcon> createState() => _NavIconState();
 }
 
-class _NavPillState extends State<_NavPill> {
+class _NavIconState extends State<_NavIcon> {
   bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onTap();
-        },
-        onTapCancel: () => setState(() => _pressed = false),
-        child: AnimatedScale(
-          scale: _pressed ? 0.90 : 1.0,
-          duration: const Duration(milliseconds: 100),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.90 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: SizedBox(
+          width: 56,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: 5),
+                    horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: widget.selected
                       ? widget.scheme.primary.withValues(alpha: 0.14)
@@ -270,7 +260,7 @@ class _NavPillState extends State<_NavPill> {
                   duration: const Duration(milliseconds: 200),
                   child: Icon(
                     widget.icon,
-                    size: 22,
+                    size: 24,
                     color: widget.selected
                         ? widget.scheme.primary
                         : widget.scheme.onSurfaceVariant.withValues(alpha: 0.6),
@@ -288,7 +278,7 @@ class _NavPillState extends State<_NavPill> {
                       ? widget.scheme.primary
                       : widget.scheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
-                child: Text(widget.label),
+                child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
@@ -297,6 +287,8 @@ class _NavPillState extends State<_NavPill> {
     );
   }
 }
+
+
 
 // ─── Scan FAB ─────────────────────────────────────────────────────────────────
 
@@ -345,14 +337,14 @@ class _ScanFab extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
-                      colors: [
-                        scheme.primary,
-                        Color.lerp(scheme.primary, scheme.tertiary, 0.6)!,
+                      colors: const [
+                        Color(0xFF0055FF), // Deep blue from logo
+                        Color(0xFF00E5FF), // Cyan laser from logo
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    boxShadow: AppShadows.glow(scheme.primary),
+                    boxShadow: AppShadows.glow(const Color(0xFF0055FF)),
                   ),
                   child: const Icon(
                     Icons.qr_code_scanner_rounded,

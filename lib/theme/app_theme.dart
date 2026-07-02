@@ -9,17 +9,17 @@ class AccentColors {
   AccentColors._();
 
   static const List<Color> options = [
-    Color(0xFF3B7FF5), // Blue (default)
+    Color(0xFF0055FF), // Deep Blue (Logo Primary)
+    Color(0xFF00E5FF), // Cyan Laser (Logo Accent)
     Color(0xFF7C5CFC), // Violet
     Color(0xFF00BFA5), // Teal
     Color(0xFFF59E0B), // Amber
     Color(0xFFEF4444), // Coral
     Color(0xFF22C55E), // Green
     Color(0xFFEC4899), // Pink
-    Color(0xFF0EA5E9), // Sky
   ];
 
-  static const Color defaultAccent = Color(0xFF3B7FF5);
+  static const Color defaultAccent = Color(0xFF0055FF);
 }
 
 /// Central Material 3 theme builder with premium typography and design tokens.
