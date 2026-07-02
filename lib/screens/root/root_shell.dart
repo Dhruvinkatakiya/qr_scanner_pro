@@ -1,4 +1,4 @@
-import 'dart:ui';
+
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -77,10 +77,6 @@ class RootShellState extends ConsumerState<RootShell>
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
     return Scaffold(
       extendBody: true, // Allows body to scroll behind the BottomAppBar
       body: IndexedStack(
@@ -105,12 +101,12 @@ class RootShellState extends ConsumerState<RootShell>
             );
           });
         },
-        scheme: scheme,
+        scheme: Theme.of(context).colorScheme,
       ),
       bottomNavigationBar: _StandardNavBar(
         selectedIndex: _index,
         onTabSelected: goTo,
-        scheme: scheme,
+        scheme: Theme.of(context).colorScheme,
       ),
     );
   }

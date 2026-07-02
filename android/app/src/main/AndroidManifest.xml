@@ -40,6 +40,10 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8003148820564585~8831848724"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

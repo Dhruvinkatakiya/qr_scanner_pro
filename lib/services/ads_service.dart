@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -27,13 +28,55 @@ class AdsService {
   InterstitialAd? _interstitialAd;
   bool _isInterstitialAdLoading = false;
 
+  String _bannerUnitId = AppConstants.testBannerAdUnit;
+  String _interstitialUnitId = AppConstants.testInterstitialAdUnit;
+  String _appOpenUnitId = AppConstants.testAppOpenAdUnit;
+
+  bool _bannerEnabled = true;
+  bool _interstitialEnabled = true;
+  bool _appOpenEnabled = true;
+
   /// Prevents multiple full-screen ads from showing over each other.
   bool isShowingAd = false;
+
+  Future<void> _fetchAdConfig() async {
+    try {
+      final request = await HttpClient().getUrl(Uri.parse(
+          'https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnR6eITh2IYe-n3PsBQ-h8Cy3pUzJkgu1qXUkZYo_RMCABHARVVhgRvMK4xf_7dU7YALnAwlYxQ9QMvr4TKhFGjoABW2IjEcp8Jl7Iz-Wc6a3oZ4NKIFefimFRVyUe8lBJmaJCy8bvSxEnDzpm7sTeClZ0e0OjjUn0bjr1VFtPc7xn18HRhVAjO3_y7aSlpaqvnKtFv0ILpKN3diGGqQ-_v_9MIlfJ7J51EX5LckHr7mEDfwk8CvS-HROIVdwzB5yg4c2b5C4iiEQ8BO6G9j2ldAREUV9Q&lib=MH__BrZO-6yBZFmsCpXNALTBB5iDfypnN'));
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final stringData = await response.transform(utf8.decoder).join();
+        final List<dynamic> data = jsonDecode(stringData);
+        for (var item in data) {
+          if (item['Platform'] == 'Android' && item['App Name'] == 'QR_Scanner') {
+            final type = item['Ad Type'];
+            final unitId = item['Ad Unit ID'];
+            final status = item['Status'];
+            final isEnabled = status == 'Enable';
+
+            if (type == 'Banner') {
+              _bannerUnitId = unitId;
+              _bannerEnabled = isEnabled;
+            } else if (type == 'Interstitial') {
+              _interstitialUnitId = unitId;
+              _interstitialEnabled = isEnabled;
+            } else if (type == 'App open') {
+              _appOpenUnitId = unitId;
+              _appOpenEnabled = isEnabled;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch ad config: $e');
+    }
+  }
 
   Future<void> init() async {
     if (_initialised || !_supportedPlatform) return;
     try {
       await MobileAds.instance.initialize();
+      await _fetchAdConfig();
       _initialised = true;
       
       // Pre-load full-screen ads in the background
@@ -47,11 +90,9 @@ class AdsService {
   // ---------------------------------------------------------------------------
   // Banner Ads
   // ---------------------------------------------------------------------------
-  String get _bannerUnitId => AppConstants.testBannerAdUnit;
-
   /// Builds (but does not attach) a banner. Returns null when ads are disabled.
   BannerAd? createBanner({VoidCallback? onLoaded}) {
-    if (!enabled || !_initialised || !_supportedPlatform) return null;
+    if (!enabled || !_bannerEnabled || !_initialised || !_supportedPlatform) return null;
     return BannerAd(
       adUnitId: _bannerUnitId,
       size: AdSize.banner,
@@ -70,12 +111,12 @@ class AdsService {
   // App Open Ads
   // ---------------------------------------------------------------------------
   void loadAppOpenAd() {
-    if (!enabled || !_initialised || !_supportedPlatform) return;
+    if (!enabled || !_appOpenEnabled || !_initialised || !_supportedPlatform) return;
     if (_appOpenAd != null || _isAppOpenAdLoading) return;
     
     _isAppOpenAdLoading = true;
     AppOpenAd.load(
-      adUnitId: AppConstants.testAppOpenAdUnit,
+      adUnitId: _appOpenUnitId,
       request: const AdRequest(),
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
@@ -119,12 +160,12 @@ class AdsService {
   // Interstitial Ads
   // ---------------------------------------------------------------------------
   void loadInterstitialAd() {
-    if (!enabled || !_initialised || !_supportedPlatform) return;
+    if (!enabled || !_interstitialEnabled || !_initialised || !_supportedPlatform) return;
     if (_interstitialAd != null || _isInterstitialAdLoading) return;
     
     _isInterstitialAdLoading = true;
     InterstitialAd.load(
-      adUnitId: AppConstants.testInterstitialAdUnit,
+      adUnitId: _interstitialUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
