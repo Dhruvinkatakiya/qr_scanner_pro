@@ -202,8 +202,10 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen>
     return Scaffold(
       appBar: AppBar(title: Text('generate.title'.tr())),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.base, AppSpacing.sm, AppSpacing.base, 120.0),
+        // extendBody: the bottom inset already includes the nav bar height +
+        // system gesture inset, so pad past it to keep the Save button visible.
+        padding: EdgeInsets.fromLTRB(AppSpacing.base, AppSpacing.sm,
+            AppSpacing.base, MediaQuery.paddingOf(context).bottom + AppSpacing.xl),
         children: [
           // ─── Type selector ─────────────────────────────────────────────────
           _TypeSelector(

@@ -167,8 +167,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 message: 'history.empty_body'.tr(),
               )
             : ListView.builder(
-                padding: const EdgeInsets.only(
-                    bottom: 120,
+                // extendBody: bottom inset includes nav bar + gesture inset.
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.xl,
                     left: AppSpacing.base,
                     right: AppSpacing.base,
                     top: AppSpacing.sm),
