@@ -1,15 +1,18 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../providers/history_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/subscription_provider.dart';
+import '../../theme/app_shadows.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../utils/launch_helper.dart';
-import '../paywall/paywall_screen.dart';
 
 const _languages = {
   'en': 'English',
@@ -27,22 +30,24 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
-    final sub = ref.watch(subscriptionProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text('settings.title'.tr())),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base, AppSpacing.sm, AppSpacing.base, 40),
         children: [
-          // Premium banner
-          _ProCard(isPro: sub.isPro),
-          const SizedBox(height: 20),
+          // ─── Rate / Share banner ───────────────────────────────────────
+          _RateBanner().animate().fadeIn(duration: 400.ms).slideY(
+                begin: -0.04, end: 0, duration: 400.ms, curve: Curves.easeOut),
+          const SizedBox(height: AppSpacing.lg),
 
+          // ─── Appearance ────────────────────────────────────────────────
           _SectionCard(
             title: 'settings.appearance'.tr(),
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: SegmentedButton<ThemeMode>(
                   segments: [
                     ButtonSegment(
@@ -59,175 +64,169 @@ class SettingsScreen extends ConsumerWidget {
                   onSelectionChanged: (s) => notifier.setThemeMode(s.first),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('settings.accent'.tr(),
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(
+                  'settings.accent'.tr(),
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.md),
+              // Glow-ring accent picker
               Wrap(
-                spacing: 12,
-                runSpacing: 12,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
                 children: [
                   for (final c in AccentColors.options)
-                    GestureDetector(
+                    _AccentSwatch(
+                      color: c,
+                      selected: settings.accentColor.toARGB32() == c.toARGB32(),
                       onTap: () => notifier.setAccentColor(c),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: settings.accentColor.toARGB32() ==
-                                    c.toARGB32()
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        child: settings.accentColor.toARGB32() == c.toARGB32()
-                            ? const Icon(Icons.check,
-                                color: Colors.white, size: 18)
-                            : null,
-                      ),
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.language_rounded),
+                leading: Icon(Icons.language_rounded,
+                    color: Theme.of(context).colorScheme.primary),
                 title: Text('settings.language'.tr()),
                 trailing: Text(
                   _languages[context.locale.languageCode] ?? 'English',
                   style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      color:
+                          Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 onTap: () => _pickLanguage(context),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
+          ).animate().fadeIn(duration: 400.ms, delay: 80.ms),
 
+          const SizedBox(height: AppSpacing.base),
+
+          // ─── Feedback ──────────────────────────────────────────────────
           _SectionCard(
             title: 'settings.feedback'.tr(),
             children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: const Icon(Icons.volume_up_rounded),
-                title: Text('settings.sound'.tr()),
+              _ToggleTile(
+                icon: Icons.volume_up_rounded,
+                title: 'settings.sound'.tr(),
                 value: settings.soundEnabled,
                 onChanged: notifier.setSoundEnabled,
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: const Icon(Icons.vibration_rounded),
-                title: Text('settings.haptics'.tr()),
+              _ToggleTile(
+                icon: Icons.vibration_rounded,
+                title: 'settings.haptics'.tr(),
                 value: settings.hapticsEnabled,
                 onChanged: notifier.setHapticsEnabled,
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                secondary: const Icon(Icons.link_rounded),
-                title: Text('settings.auto_open'.tr()),
+              _ToggleTile(
+                icon: Icons.link_rounded,
+                title: 'settings.auto_open'.tr(),
                 value: settings.autoOpenLinks,
                 onChanged: notifier.setAutoOpenLinks,
               ),
             ],
-          ),
-          const SizedBox(height: 16),
+          ).animate().fadeIn(duration: 400.ms, delay: 120.ms),
 
+          const SizedBox(height: AppSpacing.base),
+
+          // ─── Data / Account ────────────────────────────────────────────
           _SectionCard(
             title: 'settings.account'.tr(),
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.ios_share_rounded),
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(Icons.ios_share_rounded,
+                      color: Theme.of(context).colorScheme.primary, size: 18),
+                ),
                 title: Text('settings.export'.tr()),
                 subtitle: Text('settings.export_desc'.tr()),
                 onTap: () => _exportBackup(context, ref),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.download_rounded),
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: const Icon(Icons.download_rounded,
+                      color: Color(0xFF22C55E), size: 18),
+                ),
                 title: Text('settings.import'.tr()),
                 subtitle: Text('settings.import_desc'.tr()),
                 onTap: () => _importBackup(context, ref),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
+          ).animate().fadeIn(duration: 400.ms, delay: 160.ms),
 
-          _SectionCard(
-            title: 'settings.premium'.tr(),
-            children: [
-              if (sub.isPro)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.verified_rounded,
-                      color: Color(0xFF23A455)),
-                  title: Text(sub.displayName),
-                  trailing: TextButton(
-                    onPressed: () =>
-                        LaunchHelper.openUrl(AppConstants.playStoreUrl),
-                    child: Text('settings.manage_sub'.tr()),
-                  ),
-                )
-              else
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.workspace_premium_rounded,
-                      color: Color(0xFFF7931A)),
-                  title: Text('settings.go_pro'.tr()),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                  ),
-                ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.restore_rounded),
-                title: Text('settings.restore_purchases'.tr()),
-                onTap: () =>
-                    ref.read(subscriptionProvider.notifier).restore(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.base),
 
+          // ─── About ─────────────────────────────────────────────────────
           _SectionCard(
             title: 'settings.about'.tr(),
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.privacy_tip_rounded),
+                leading: _IconTile(
+                    icon: Icons.privacy_tip_rounded,
+                    color: const Color(0xFF7C5CFC)),
                 title: Text('settings.privacy'.tr()),
+                trailing: const Icon(Icons.open_in_new_rounded, size: 16),
                 onTap: () =>
                     LaunchHelper.openUrl(AppConstants.privacyPolicyUrl),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.star_rate_rounded),
+                leading: _IconTile(
+                    icon: Icons.star_rate_rounded,
+                    color: const Color(0xFFF59E0B)),
                 title: Text('settings.rate'.tr()),
+                trailing: const Icon(Icons.open_in_new_rounded, size: 16),
                 onTap: () => LaunchHelper.openUrl(AppConstants.playStoreUrl),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.support_agent_rounded),
+                leading: _IconTile(
+                    icon: Icons.support_agent_rounded,
+                    color: const Color(0xFF3B7FF5)),
                 title: Text('settings.contact'.tr()),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 18),
                 onTap: () => LaunchHelper.email(AppConstants.supportEmail,
                     subject: 'QR Scanner Pro support'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.info_outline_rounded),
+                leading: _IconTile(
+                    icon: Icons.info_outline_rounded,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
                 title: Text('settings.version'.tr()),
-                trailing: const Text('1.0.0'),
+                trailing: Text(
+                  '1.0.0',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
               ),
             ],
-          ),
+          ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
         ],
       ),
     );
@@ -305,7 +304,8 @@ class SettingsScreen extends ConsumerWidget {
           await ref.read(historyProvider.notifier).importAll(data.records);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('settings.import_done'.tr(args: ['$added']))));
+            content:
+                Text('settings.import_done'.tr(args: ['$added']))));
       }
     } catch (_) {
       if (context.mounted) {
@@ -316,74 +316,162 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _ProCard extends StatelessWidget {
-  const _ProCard({required this.isPro});
-  final bool isPro;
+// ─── Rate / Share Banner ─────────────────────────────────────────────────────
+
+class _RateBanner extends StatefulWidget {
+  @override
+  State<_RateBanner> createState() => _RateBannerState();
+}
+
+class _RateBannerState extends State<_RateBanner> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    if (isPro) {
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-              colors: [Color(0xFF23A455), Color(0xFF1B8F49)]),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.verified_rounded, color: Colors.white, size: 32),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text('paywall.already_pro'.tr(),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800)),
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) async {
+        setState(() => _pressed = false);
+        await SharePlus.instance.share(
+          ShareParams(
+            text: 'Check out QR Scanner Pro — a free, full-featured QR code scanner and generator!\n${AppConstants.playStoreUrl}',
+          ),
+        );
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.base),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                scheme.primary.withValues(alpha: 0.85),
+                scheme.tertiary.withValues(alpha: 0.85),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-      );
-    }
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const PaywallScreen()),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-              colors: [Color(0xFFF7B733), Color(0xFFF7931A)]),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.workspace_premium_rounded,
-                color: Colors.white, size: 32),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('settings.go_pro'.tr(),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900)),
-                  Text('paywall.subtitle'.tr(),
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9))),
-                ],
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            boxShadow: AppShadows.md(scheme.primary),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: const Icon(Icons.favorite_rounded,
+                    color: Colors.white, size: 24),
               ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white),
-          ],
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Enjoying QR Scanner Pro?',
+                      style: GoogleFonts.manrope(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Share with friends or leave a review ⭐',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ─── Accent Colour Swatch ─────────────────────────────────────────────────────
+
+class _AccentSwatch extends StatefulWidget {
+  const _AccentSwatch({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_AccentSwatch> createState() => _AccentSwatchState();
+}
+
+class _AccentSwatchState extends State<_AccentSwatch> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: widget.color,
+            shape: BoxShape.circle,
+            boxShadow: widget.selected
+                ? [
+                    BoxShadow(
+                      color: widget.color.withValues(alpha: 0.5),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                    BoxShadow(
+                      color: widget.color.withValues(alpha: 0.25),
+                      blurRadius: 24,
+                      spreadRadius: 4,
+                    ),
+                  ]
+                : AppShadows.sm(widget.color),
+            border: widget.selected
+                ? Border.all(color: Colors.white, width: 2.5)
+                : null,
+          ),
+          child: AnimatedOpacity(
+            opacity: widget.selected ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.check_rounded,
+                color: Colors.white, size: 18),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Section Card ─────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.children});
@@ -392,25 +480,92 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(title,
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  letterSpacing: 0.4)),
+          padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.sm),
+          child: Text(
+            title.toUpperCase(),
+            style: GoogleFonts.inter(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              letterSpacing: 1.0,
+            ),
+          ),
         ),
-        Card(
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161B26) : Colors.white,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            border: isDark
+                ? Border.all(color: Colors.white.withValues(alpha: 0.06))
+                : null,
+            boxShadow:
+                isDark ? null : AppShadows.sm(Colors.black),
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.base, vertical: AppSpacing.sm),
             child: Column(children: children),
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Toggle Tile ──────────────────────────────────────────────────────────────
+
+class _ToggleTile extends StatelessWidget {
+  const _ToggleTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: Icon(
+        icon,
+        color: value
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      title: Text(title),
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
+
+// ─── Icon Tile ────────────────────────────────────────────────────────────────
+
+class _IconTile extends StatelessWidget {
+  const _IconTile({required this.icon, required this.color});
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Icon(icon, color: color, size: 18),
     );
   }
 }

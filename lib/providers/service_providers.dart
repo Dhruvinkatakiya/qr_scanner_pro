@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/ads_service.dart';
 import '../services/backup_service.dart';
-import '../services/billing_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/permission_service.dart';
 import '../services/qr_parser_service.dart';
@@ -28,12 +27,6 @@ final permissionServiceProvider =
 /// Firebase dependencies.
 final cloudSyncServiceProvider =
     Provider<CloudSyncService>((ref) => const LocalOnlyCloudSyncService());
-
-final billingServiceProvider = Provider<BillingService>((ref) {
-  final service = BillingService();
-  ref.onDispose(service.dispose);
-  return service;
-});
 
 final adsServiceProvider = Provider<AdsService>((ref) => AdsService.instance);
 

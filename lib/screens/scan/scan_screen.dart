@@ -10,11 +10,9 @@ import '../../models/scan_record.dart';
 import '../../providers/history_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/subscription_provider.dart';
 import '../../services/permission_service.dart';
 import '../../services/scanner_service.dart';
 import '../../utils/feedback.dart';
-import '../paywall/paywall_screen.dart';
 import '../result/result_screen.dart';
 import 'scan_overlay.dart';
 
@@ -107,7 +105,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     _handling = true;
     await _controller.stop();
     if (!mounted) return;
-    ref.read(adsServiceProvider).maybeShowInterstitial();
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ResultScreen(recordId: record.id)),
     );
@@ -137,18 +134,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   }
 
   Future<void> _toggleBatch() async {
-    if (!ref.read(subscriptionProvider).isPro) {
-      _promptUpgrade('pro.batch_locked'.tr());
-      return;
-    }
     setState(() => _batchMode = !_batchMode);
-  }
-
-  void _promptUpgrade(String message) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => _UpgradeSheet(message: message),
-    );
   }
 
   Future<void> _setZoom(double value) async {
@@ -453,39 +439,6 @@ class _PermissionDenied extends StatelessWidget {
             child: Text(permanentlyDenied
                 ? 'scan.open_settings'.tr()
                 : 'scan.grant'.tr()),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _UpgradeSheet extends StatelessWidget {
-  const _UpgradeSheet({required this.message});
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.workspace_premium_rounded,
-              size: 48, color: Color(0xFFF7931A)),
-          const SizedBox(height: 12),
-          Text(message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PaywallScreen()),
-              );
-            },
-            child: Text('settings.go_pro'.tr()),
           ),
         ],
       ),

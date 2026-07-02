@@ -8,16 +8,14 @@ import '../utils/constants.dart';
 /// Wraps Google Mobile Ads. Uses Google's official **test** ad units by default
 /// (see [AppConstants]); swap in real unit ids before release.
 ///
-/// All entry points are safe to call even when the SDK failed to initialise or
-/// the user is Pro — callers simply gate on [enabled].
+/// Only banner ads are served — interstitials have been removed.
 class AdsService {
   AdsService._();
   static final AdsService instance = AdsService._();
 
   bool _initialised = false;
-  int _scansSinceInterstitial = 0;
 
-  /// Set false for Pro users so no ad code paths run.
+  /// Set false to disable all ad code paths.
   bool enabled = true;
 
   bool get _supportedPlatform => !kIsWeb && Platform.isAndroid;
@@ -33,7 +31,6 @@ class AdsService {
   }
 
   String get _bannerUnitId => AppConstants.testBannerAdUnit;
-  String get _interstitialUnitId => AppConstants.testInterstitialAdUnit;
 
   /// Builds (but does not attach) a banner. Returns null when ads are disabled.
   BannerAd? createBanner({VoidCallback? onLoaded}) {
@@ -50,29 +47,5 @@ class AdsService {
         },
       ),
     )..load();
-  }
-
-  /// Shows an interstitial roughly every [frequency] scans, for free users.
-  void maybeShowInterstitial({int frequency = 4}) {
-    if (!enabled || !_initialised) return;
-    _scansSinceInterstitial++;
-    if (_scansSinceInterstitial < frequency) return;
-    _scansSinceInterstitial = 0;
-
-    InterstitialAd.load(
-      adUnitId: _interstitialUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) => ad.dispose(),
-            onAdFailedToShowFullScreenContent: (ad, _) => ad.dispose(),
-          );
-          ad.show();
-        },
-        onAdFailedToLoad: (error) =>
-            debugPrint('Interstitial failed: $error'),
-      ),
-    );
   }
 }

@@ -1,5 +1,5 @@
 name: qr_scanner_pro
-description: "A new Flutter project."
+description: "A premium QR scanner and generator with no feature restrictions."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -52,8 +52,10 @@ dependencies:
   collection: ^1.19.1
   flutter_local_notifications: ^22.0.1
   easy_localization: ^3.0.8
-  in_app_purchase: ^3.3.0
   google_mobile_ads: ^9.0.0
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

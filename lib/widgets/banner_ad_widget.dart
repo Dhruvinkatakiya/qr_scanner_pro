@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../providers/service_providers.dart';
-import '../providers/subscription_provider.dart';
 
-/// An adaptive banner that self-hides for Pro users or when loading fails.
+/// A simple banner ad widget. Hides itself gracefully when the ad fails to load
+/// or when the platform doesn't support ads.
 class BannerAdWidget extends ConsumerStatefulWidget {
   const BannerAdWidget({super.key});
 
@@ -24,7 +24,6 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
   }
 
   void _load() {
-    if (ref.read(subscriptionProvider).isPro) return;
     final ad = ref.read(adsServiceProvider).createBanner(
       onLoaded: () {
         if (mounted) setState(() => _loaded = true);
@@ -41,8 +40,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final isPro = ref.watch(subscriptionProvider.select((s) => s.isPro));
-    if (isPro || !_loaded || _ad == null) return const SizedBox.shrink();
+    if (!_loaded || _ad == null) return const SizedBox.shrink();
     return SafeArea(
       top: false,
       child: SizedBox(

@@ -6,9 +6,7 @@ import '../models/app_folder.dart';
 import '../models/content_type.dart';
 import '../models/scan_record.dart';
 import '../services/storage_service.dart';
-import '../utils/constants.dart';
 import 'service_providers.dart';
-import 'subscription_provider.dart';
 
 // -----------------------------------------------------------------------------
 // Records
@@ -23,7 +21,6 @@ class HistoryNotifier extends Notifier<List<ScanRecord>> {
   StorageService get _storage => ref.read(storageServiceProvider);
 
   bool get _cloudEnabled =>
-      ref.read(subscriptionProvider).isPro &&
       ref.read(cloudSyncServiceProvider).isAvailable;
 
   Future<void> add(ScanRecord record) async {
@@ -105,7 +102,7 @@ class HistoryNotifier extends Notifier<List<ScanRecord>> {
     }
   }
 
-  /// Full two-way restore from the cloud (Pro). Remote wins on conflicts by
+  /// Full two-way restore from the cloud. Remote wins on conflicts by
   /// most-recent update time; local-only records are pushed up.
   Future<void> syncWithCloud() async {
     if (!_cloudEnabled) return;
@@ -140,10 +137,8 @@ class FoldersNotifier extends Notifier<List<AppFolder>> {
 
   StorageService get _storage => ref.read(storageServiceProvider);
 
-  /// Returns false if the free-tier folder limit was hit.
+  /// All users can create unlimited folders — no paywall restriction.
   Future<bool> addFolder(AppFolder folder) async {
-    final isPro = ref.read(subscriptionProvider).isPro;
-    if (!isPro && state.length >= AppConstants.freeFolderLimit) return false;
     await _storage.putFolder(folder);
     state = [...state, folder];
     return true;
@@ -170,8 +165,7 @@ class FoldersNotifier extends Notifier<List<AppFolder>> {
     return null;
   }
 
-  /// Merges imported folders, skipping ids that already exist (ignores the free
-  /// tier limit so a restore never silently drops folders).
+  /// Merges imported folders, skipping ids that already exist.
   Future<void> importAll(List<AppFolder> incoming) async {
     final existing = {for (final f in state) f.id};
     final toAdd = incoming.where((f) => !existing.contains(f.id)).toList();

@@ -1,6 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,12 +10,12 @@ import '../../models/content_type.dart';
 import '../../models/qr_style_config.dart';
 import '../../models/scan_record.dart';
 import '../../providers/history_provider.dart';
-import '../../providers/subscription_provider.dart';
 import '../../services/qr_content_builder.dart';
 import '../../services/qr_export_service.dart';
+import '../../theme/app_shadows.dart';
+import '../../theme/app_spacing.dart';
 import '../../utils/launch_helper.dart';
 import '../../widgets/styled_qr_view.dart';
-import '../paywall/paywall_screen.dart';
 import 'qr_style_editor.dart';
 
 /// Generator content types and their metadata.
@@ -41,10 +43,13 @@ class GenerateScreen extends ConsumerStatefulWidget {
   ConsumerState<GenerateScreen> createState() => _GenerateScreenState();
 }
 
-class _GenerateScreenState extends ConsumerState<GenerateScreen> {
+class _GenerateScreenState extends ConsumerState<GenerateScreen>
+    with SingleTickerProviderStateMixin {
   final _repaintKey = GlobalKey();
   final _picker = ImagePicker();
   final _export = const QrExportService();
+
+  late final AnimationController _typeAnimController;
 
   GenType _type = GenType.url;
   QrStyleConfig _style = const QrStyleConfig();
@@ -64,6 +69,10 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
   @override
   void initState() {
     super.initState();
+    _typeAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
     for (final k in _fieldKeys) {
       _c[k] = TextEditingController()..addListener(_onChanged);
     }
@@ -71,6 +80,7 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
 
   @override
   void dispose() {
+    _typeAnimController.dispose();
     for (final c in _c.values) {
       c.dispose();
     }
@@ -80,6 +90,12 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
   void _onChanged() => setState(() {});
 
   String t(String key) => _c[key]!.text.trim();
+
+  void _switchType(GenType type) {
+    if (type == _type) return;
+    _typeAnimController.forward(from: 0);
+    setState(() => _type = type);
+  }
 
   /// Builds the payload string for the current form + type.
   String get _content {
@@ -135,11 +151,6 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
     }
   }
 
-  bool get _isPro => ref.read(subscriptionProvider).isPro;
-
-  void _openPaywall() => Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PaywallScreen()));
-
   Future<void> _pickLogo() async {
     final file = await _picker.pickImage(source: ImageSource.gallery);
     if (file != null) {
@@ -185,76 +196,127 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
   @override
   Widget build(BuildContext context) {
     final content = _content;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(title: Text('generate.title'.tr())),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base, AppSpacing.sm, AppSpacing.base, AppSpacing.xl),
         children: [
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: GenType.values.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final type = GenType.values[i];
-                final selected = type == _type;
-                return ChoiceChip(
-                  avatar: Icon(type.icon,
-                      size: 18,
-                      color: selected
-                          ? Colors.white
-                          : Theme.of(context).colorScheme.onSurfaceVariant),
-                  label: Text(type.label),
-                  selected: selected,
-                  showCheckmark: false,
-                  selectedColor: Theme.of(context).colorScheme.primary,
-                  labelStyle: TextStyle(
-                      color: selected ? Colors.white : null,
-                      fontWeight: FontWeight.w600),
-                  onSelected: (_) => setState(() => _type = type),
-                );
-              },
+          // ─── Type selector ─────────────────────────────────────────────────
+          _TypeSelector(
+            selectedType: _type,
+            onTypeSelected: _switchType,
+          ).animate().fadeIn(duration: 400.ms).slideY(
+                begin: -0.05, end: 0, duration: 400.ms, curve: Curves.easeOut),
+
+          const SizedBox(height: AppSpacing.base),
+
+          // ─── QR preview hero ───────────────────────────────────────────────
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
+            child: Container(
+              key: ValueKey(content.isEmpty),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF161B26) : Colors.white,
+                borderRadius: BorderRadius.circular(AppRadius.xxl),
+                border: isDark
+                    ? Border.all(
+                        color: Colors.white.withValues(alpha: 0.06))
+                    : Border.all(
+                        color: Colors.black.withValues(alpha: 0.04)),
+                boxShadow: isDark
+                    ? null
+                    : AppShadows.md(Colors.black),
+              ),
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                children: [
+                  RepaintBoundary(
+                    key: _repaintKey,
+                    child: StyledQrView(
+                        data: content, style: _style, size: 200),
+                  ),
+                  if (content.isEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'generate.enter_content'.tr(),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ).animate().fadeIn(duration: 450.ms, delay: 80.ms).slideY(
+                begin: 0.04, end: 0, duration: 450.ms, delay: 80.ms,
+                curve: Curves.easeOut),
+
+          const SizedBox(height: AppSpacing.lg),
+
+          // ─── Form ──────────────────────────────────────────────────────────
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.04),
+                  end: Offset.zero,
+                ).animate(anim),
+                child: child,
+              ),
+            ),
+            child: Column(
+              key: ValueKey(_type),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _buildForm(),
             ),
           ),
-          const SizedBox(height: 16),
-          Center(
-            child: RepaintBoundary(
-              key: _repaintKey,
-              child: StyledQrView(data: content, style: _style, size: 220),
-            ),
+
+          const SizedBox(height: AppSpacing.sm),
+
+          // ─── Divider ───────────────────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(child: Divider(color: scheme.outlineVariant.withValues(alpha: 0.3))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Text(
+                  'Style',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        letterSpacing: 1.2,
+                      ),
+                ),
+              ),
+              Expanded(child: Divider(color: scheme.outlineVariant.withValues(alpha: 0.3))),
+            ],
           ),
-          if (content.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text('generate.enter_content'.tr(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            ),
-          const SizedBox(height: 20),
-          ..._buildForm(),
-          const SizedBox(height: 12),
-          const Divider(),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // ─── Style editor ──────────────────────────────────────────────────
           QrStyleEditor(
             style: _style,
-            isPro: _isPro,
             onChanged: (s) => setState(() => _style = s),
             onPickLogo: _pickLogo,
-            onUpgrade: _openPaywall,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: (content.isEmpty || _busy) ? null : _saveAndShare,
-            icon: _busy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.ios_share_rounded),
-            label: Text('generate.save_share'.tr()),
-          ),
+          ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
+
+          const SizedBox(height: AppSpacing.lg),
+
+          // ─── Save & Share button ───────────────────────────────────────────
+          _SaveButton(
+            busy: _busy,
+            enabled: content.isNotEmpty && !_busy,
+            onPressed: _saveAndShare,
+          ).animate().fadeIn(duration: 400.ms, delay: 280.ms),
         ],
       ),
     );
@@ -273,7 +335,7 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
         return [
           _field('ssid', 'Network name (SSID)'),
           _field('password', 'Password'),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<String>(
             initialValue: _wifiSecurity,
             decoration: const InputDecoration(labelText: 'Security'),
@@ -311,7 +373,7 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
               Expanded(
                   child: _field('lat', 'Latitude',
                       keyboard: TextInputType.number)),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                   child: _field('lng', 'Longitude',
                       keyboard: TextInputType.number)),
@@ -341,10 +403,9 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
             ],
             onChanged: (v) => setState(() => _cryptoNetwork = v ?? 'bitcoin'),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           _field('crypto_address', 'Wallet address'),
-          _field('amount', 'Amount (optional)',
-              keyboard: TextInputType.number),
+          _field('amount', 'Amount (optional)', keyboard: TextInputType.number),
         ];
     }
   }
@@ -352,12 +413,226 @@ class _GenerateScreenState extends ConsumerState<GenerateScreen> {
   Widget _field(String key, String hint,
       {TextInputType? keyboard, int maxLines = 1}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: TextField(
         controller: _c[key],
         keyboardType: keyboard,
         maxLines: maxLines,
         decoration: InputDecoration(hintText: hint),
+      ),
+    );
+  }
+}
+
+// ─── Type Selector ───────────────────────────────────────────────────────────
+
+class _TypeSelector extends StatelessWidget {
+  const _TypeSelector({
+    required this.selectedType,
+    required this.onTypeSelected,
+  });
+
+  final GenType selectedType;
+  final ValueChanged<GenType> onTypeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        itemCount: GenType.values.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (_, i) {
+          final type = GenType.values[i];
+          final selected = type == selectedType;
+          return _TypeChip(
+            icon: type.icon,
+            label: type.label,
+            selected: selected,
+            onTap: () => onTypeSelected(type),
+            accentColor: scheme.primary,
+            isDark: isDark,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TypeChip extends StatefulWidget {
+  const _TypeChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.accentColor,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color accentColor;
+  final bool isDark;
+
+  @override
+  State<_TypeChip> createState() => _TypeChipState();
+}
+
+class _TypeChipState extends State<_TypeChip> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? widget.accentColor
+                : widget.isDark
+                    ? const Color(0xFF161B26)
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+            border: widget.selected
+                ? null
+                : Border.all(
+                    color: widget.isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+            boxShadow: widget.selected
+                ? AppShadows.sm(widget.accentColor)
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                size: 16,
+                color: widget.selected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: widget.selected
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Save Button ─────────────────────────────────────────────────────────────
+
+class _SaveButton extends StatefulWidget {
+  const _SaveButton({
+    required this.busy,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  State<_SaveButton> createState() => _SaveButtonState();
+}
+
+class _SaveButtonState extends State<_SaveButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: widget.enabled
+          ? (_) {
+              setState(() => _pressed = false);
+              widget.onPressed();
+            }
+          : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: widget.enabled
+                ? LinearGradient(
+                    colors: [scheme.primary, scheme.tertiary],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : null,
+            color: widget.enabled ? null : scheme.onSurface.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            boxShadow:
+                widget.enabled ? AppShadows.md(scheme.primary) : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (widget.busy)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              else
+                const Icon(Icons.ios_share_rounded,
+                    color: Colors.white, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'generate.save_share'.tr(),
+                style: GoogleFonts.manrope(
+                  color: widget.enabled
+                      ? Colors.white
+                      : scheme.onSurface.withValues(alpha: 0.35),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
