@@ -8,8 +8,8 @@
         android:shortcutLongLabel="@string/shortcut_scan_long">
         <intent
             android:action="com.qrscannerpro.action.SCAN"
-            android:targetPackage="com.qrscannerpro.qr_scanner_pro"
-            android:targetClass="com.qrscannerpro.qr_scanner_pro.MainActivity" />
+            android:targetPackage="com.devamjyot.qr_scanner"
+            android:targetClass="com.devamjyot.qr_scanner.MainActivity" />
     </shortcut>
     <shortcut
         android:shortcutId="create"
@@ -19,7 +19,7 @@
         android:shortcutLongLabel="@string/shortcut_create_long">
         <intent
             android:action="com.qrscannerpro.action.CREATE"
-            android:targetPackage="com.qrscannerpro.qr_scanner_pro"
-            android:targetClass="com.qrscannerpro.qr_scanner_pro.MainActivity" />
+            android:targetPackage="com.devamjyot.qr_scanner"
+            android:targetClass="com.devamjyot.qr_scanner.MainActivity" />
     </shortcut>
 </shortcuts>
